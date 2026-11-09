@@ -7,6 +7,7 @@
 
 import AppKit
 import Defaults
+import KeyboardShortcuts
 import SwiftUI
 
 struct SmartShelfSettingsSection: View {
@@ -62,6 +63,8 @@ struct SmartShelfSettingsSection: View {
             Text("Any new png, jpg or heic file that appears in that folder is added. Your Mac's screenshot folder is suggested in the picker.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+            KeyboardShortcuts.Recorder("Clear shelf", name: .clearShelf)
 
             Stepper(value: $maxDimension, in: 320...8192, step: 160) {
                 HStack {

@@ -19,6 +19,11 @@ final class SmartShelfFeedback: ObservableObject {
         let text: String
         let style: Style
         let symbol: String
+        /// Optional trailing button (e.g. "Undo").
+        var actionTitle: String? = nil
+        var action: (@MainActor () -> Void)? = nil
+
+        static func == (a: Message, b: Message) -> Bool { a.id == b.id }
     }
 
     @Published private(set) var message: Message?
@@ -43,8 +48,10 @@ final class SmartShelfFeedback: ObservableObject {
         message = Message(text: text, style: .info, symbol: "hourglass")
     }
 
-    func succeed(_ text: String, symbol: String = "checkmark.circle.fill", duration: TimeInterval = 4) {
-        finish(Message(text: text, style: .success, symbol: symbol), duration: duration)
+    func succeed(_ text: String, symbol: String = "checkmark.circle.fill", duration: TimeInterval = 4,
+                 actionTitle: String? = nil, action: (@MainActor () -> Void)? = nil) {
+        finish(Message(text: text, style: .success, symbol: symbol, actionTitle: actionTitle, action: action),
+               duration: duration)
     }
 
     func info(_ text: String, symbol: String = "info.circle.fill", duration: TimeInterval = 3) {

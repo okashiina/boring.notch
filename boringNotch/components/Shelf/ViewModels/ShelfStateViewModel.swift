@@ -48,6 +48,22 @@ final class ShelfStateViewModel: ObservableObject {
         items.removeAll { $0.id == item.id }
     }
 
+    // TwoTabs: clear-all with undo. Removes every item WITHOUT deleting temporary files yet, so the caller
+    // can restore them; the caller runs `cleanupStoredData()` on the returned items once undo expires.
+    func detachAll() -> [ShelfItem] {
+        let old = items
+        items = []
+        return old
+    }
+
+    // TwoTabs: put detached items back in their original order (before anything added since), deduplicated.
+    func restore(_ detached: [ShelfItem]) {
+        var seen = Set<String>()
+        var merged: [ShelfItem] = []
+        for it in detached + items where seen.insert(it.identityKey).inserted { merged.append(it) }
+        items = merged
+    }
+
     func updateBookmark(for item: ShelfItem, bookmark: Data) {
         guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
         if case .file = items[idx].kind {

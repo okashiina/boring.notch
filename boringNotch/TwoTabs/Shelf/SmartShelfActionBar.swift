@@ -52,7 +52,8 @@ final class SmartShelfBarState: ObservableObject {
         let selection = ShelfSelectionModel.shared
         let newInfo = selection.hasSelection ? SmartShelfSelection.current() : .empty
         let count = selection.selectedIDs.count
-        let active = newInfo != .empty || SmartShelfFeedback.shared.message != nil
+        // The strip also stays up whenever the shelf holds items, so "Clear all" is always reachable.
+        let active = newInfo != .empty || SmartShelfFeedback.shared.message != nil || !ShelfStateViewModel.shared.isEmpty
         if newInfo != info { info = newInfo }
         if count != selectionCount { selectionCount = count }
         if active != isActive { isActive = active }
@@ -62,6 +63,7 @@ final class SmartShelfBarState: ObservableObject {
 struct SmartShelfActionBar: View {
     @ObservedObject private var state = SmartShelfBarState.shared
     @ObservedObject private var feedback = SmartShelfFeedback.shared
+    @ObservedObject private var shelf = ShelfStateViewModel.shared
 
     private enum LabelMode { case all, primary, none }
 
@@ -156,7 +158,32 @@ struct SmartShelfActionBar: View {
             if state.selectionCount > 0 {
                 deselectButton
             }
+            if !shelf.isEmpty {
+                clearAllButton(labelled: labels != .none)
+            }
         }
+    }
+
+    private func clearAllButton(labelled: Bool) -> some View {
+        Button(action: SmartShelfClear.perform) {
+            HStack(spacing: 5) {
+                Image(systemName: "trash")
+                    .font(.system(size: 14, weight: .medium))
+                    .frame(width: 18, height: 18)
+                if labelled {
+                    Text("Clear all")
+                        .font(.system(size: 12, weight: .medium))
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+            }
+            .padding(.horizontal, labelled ? 9 : 6)
+            .frame(minWidth: 30, minHeight: 30)
+        }
+        .buttonStyle(BarButtonStyle())
+        .disabled(feedback.isBusy)
+        .help(SmartShelfClear.shortcutHint.isEmpty ? "Clear all" : "Clear all (\(SmartShelfClear.shortcutHint))")
+        .accessibilityLabel("Clear all shelf items")
     }
 
     private func actionButton(_ spec: ActionSpec, labelled: Bool) -> some View {
@@ -220,6 +247,13 @@ struct SmartShelfActionBar: View {
                 .truncationMode(.middle)
                 .frame(maxWidth: 240, alignment: .leading)
                 .fixedSize(horizontal: true, vertical: false)
+            if let title = message.actionTitle, let action = message.action {
+                Button(title, action: action)
+                    .buttonStyle(BarButtonStyle())
+                    .font(.system(size: 12, weight: .semibold))
+                    .padding(.horizontal, 8)
+                    .frame(minHeight: 30)
+            }
         }
         .help(message.text)
     }

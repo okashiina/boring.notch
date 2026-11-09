@@ -9,6 +9,7 @@ import AppKit
 import Combine
 import Defaults
 import Foundation
+import KeyboardShortcuts
 import UniformTypeIdentifiers
 import Darwin
 
@@ -221,5 +222,6 @@ enum SmartShelfBootstrap {
     @MainActor
     static func start() {
         ScreenshotWatcher.shared.bootstrap()
+        KeyboardShortcuts.onKeyDown(for: .clearShelf) { SmartShelfClear.perform() }
     }
 }

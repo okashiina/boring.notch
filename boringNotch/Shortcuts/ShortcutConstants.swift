@@ -14,5 +14,6 @@ extension KeyboardShortcuts.Name {
     static let decreaseBacklight = Self("decreaseBacklight", default: .init(.f1, modifiers: [.command]))
     static let increaseBacklight = Self("increaseBacklight", default: .init(.f2, modifiers: [.command]))
     static let toggleSneakPeek = Self("toggleSneakPeek", default: .init(.h, modifiers: [.command, .shift]))
+    static let clearShelf = Self("clearShelf", default: .init(.delete, modifiers: [.control, .option, .command])) // TwoTabs
     static let toggleNotchOpen = Self("toggleNotchOpen", default: .init(.i, modifiers: [.command, .shift]))
 }
