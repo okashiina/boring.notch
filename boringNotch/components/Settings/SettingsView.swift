@@ -1012,6 +1012,8 @@ struct Shelf: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+
+            SmartShelfSettingsSection() // TwoTabs
         }
         .accentColor(.effectiveAccent)
         .navigationTitle("Shelf")

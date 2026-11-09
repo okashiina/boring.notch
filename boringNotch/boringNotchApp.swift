@@ -280,6 +280,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        SmartShelfBootstrap.start() // TwoTabs: resume the screenshot-to-shelf watcher if enabled
 
         NotificationCenter.default.addObserver(
             self,

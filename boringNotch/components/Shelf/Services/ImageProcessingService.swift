@@ -17,7 +17,7 @@ import ImageIO
 /// Options for image conversion
 struct ImageConversionOptions {
     enum ImageFormat {
-        case png, jpeg, heic, tiff, bmp
+        case png, jpeg, heic, tiff, bmp, webp
         
         var utType: UTType {
             switch self {
@@ -26,6 +26,7 @@ struct ImageConversionOptions {
             case .heic: return .heic
             case .tiff: return .tiff
             case .bmp: return .bmp
+            case .webp: return UTType(WebPEncoder.typeIdentifier) ?? .png
             }
         }
         
@@ -36,6 +37,7 @@ struct ImageConversionOptions {
             case .heic: return "heic"
             case .tiff: return "tiff"
             case .bmp: return "bmp"
+            case .webp: return "webp"
             }
         }
     }
@@ -167,6 +169,11 @@ final class ImageProcessingService {
     }
     
     private func convertToFormat(_ image: NSImage, format: ImageConversionOptions.ImageFormat, quality: Double) throws -> Data? {
+        if format == .webp {
+            // TwoTabs: WebP goes straight through ImageIO (only offered when the OS can encode it)
+            guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
+            return WebPEncoder.encode(cgImage, quality: quality)
+        }
         guard let tiffData = image.tiffRepresentation,
               let bitmap = NSBitmapImageRep(data: tiffData) else {
             return nil
@@ -199,6 +206,8 @@ final class ImageProcessingService {
                 CIImageRepresentationOption(rawValue: kCGImageDestinationLossyCompressionQuality as String): quality
             ]
             return try? context.heifRepresentation(of: ciImage, format: .RGBA8, colorSpace: colorSpace, options: options)
+        case .webp:
+            return nil // handled before the switch
         }
     }
     

@@ -70,6 +70,9 @@ struct ShelfView: View {
                 content
                     .padding()
             }
+            .overlay(alignment: .top) {
+                SmartShelfActionBar() // TwoTabs: smart shelf quick actions
+            }
             .transaction { transaction in
                 transaction.animation = vm.animation
             }

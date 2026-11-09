@@ -17,7 +17,28 @@ private let _shelfTypeAnchor: Bool = {
 final class ShelfSelectionModel: ObservableObject {
     static let shared = ShelfSelectionModel()
 
-    @Published private(set) var selectedIDs: Set<UUID> = []
+    @Published private(set) var selectedIDs: Set<UUID> = [] {
+        didSet { updateSelectionOrder(previous: oldValue) }
+    }
+
+    /// TwoTabs: IDs in the order they were selected (used e.g. for merging PDFs in click order).
+    private(set) var selectionOrder: [UUID] = []
+
+    private func updateSelectionOrder(previous: Set<UUID>) {
+        selectionOrder.removeAll { !selectedIDs.contains($0) }
+        let added = selectedIDs.subtracting(previous)
+        guard !added.isEmpty else { return }
+        // Several IDs at once (shift-range): keep their shelf order.
+        let shelfOrder = ShelfStateViewModel.shared.items.map(\.id)
+        selectionOrder.append(contentsOf: shelfOrder.filter { added.contains($0) })
+        selectionOrder.append(contentsOf: added.filter { !shelfOrder.contains($0) })
+    }
+
+    /// Selected items in selection (click) order rather than shelf order.
+    func orderedSelectedItems(in allItems: [ShelfItem]) -> [ShelfItem] {
+        let byID = Dictionary(allItems.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return selectionOrder.compactMap { byID[$0] }
+    }
 
     // Anchor for shift-range selection
     private var lastAnchorID: UUID? = nil

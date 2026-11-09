@@ -173,6 +173,11 @@ final class ShelfItemViewModel: ObservableObject {
         sharingAccessingURLs.removeAll()
     }
 
+    /// TwoTabs: opens the Convert Image dialog for the current selection (used by the smart shelf action bar).
+    func presentConvertImageDialog() {
+        MenuActionTarget(item: item, view: NSView(), viewModel: self).showConvertImageDialog()
+    }
+
     /// Call this closure to request a QuickLook preview for the given URLs.
     var onQuickLookRequest: (([URL]) -> Void)?
 
@@ -348,6 +353,9 @@ final class ShelfItemViewModel: ObservableObject {
             menu.addItem(imageActions)
             menu.addItem(NSMenuItem.separator())
         }
+
+        // TwoTabs: smart shelf extras (shrink, OCR, merge PDFs, upload)
+        SmartShelfMenu.appendItems(to: menu)
 
         // Add compression option for files/folders (single or multiple)
         if !selectedFileURLs.isEmpty {
@@ -578,7 +586,8 @@ final class ShelfItemViewModel: ObservableObject {
                 }
                 
             default:
-                break
+                // TwoTabs: smart shelf menu items
+                _ = SmartShelfActions.shared.performMenuTitle(title)
             }
         }
 
@@ -848,7 +857,7 @@ final class ShelfItemViewModel: ObservableObject {
         }
         
         @MainActor
-        private func showConvertImageDialog() {
+        func showConvertImageDialog() { // TwoTabs: not private, the action bar opens it too
             let selected = ShelfSelectionModel.shared.selectedItems(in: ShelfStateViewModel.shared.items)
             let imageURLs = selected.compactMap { $0.fileURL }.filter { ImageProcessingService.shared.isImageFile($0) }
             
@@ -873,6 +882,7 @@ final class ShelfItemViewModel: ObservableObject {
             
             let formatPopup = NSPopUpButton(frame: NSRect(x: 120, y: 140, width: 250, height: 28))
             formatPopup.addItems(withTitles: ["PNG", "JPEG", "HEIC", "TIFF", "BMP"])
+            if WebPEncoder.isAvailable { formatPopup.addItem(withTitle: "WebP") } // TwoTabs: only if ImageIO can encode it
             formatPopup.selectItem(at: 0)
             formatPopup.font = .systemFont(ofSize: 12)
             accessoryView.addSubview(formatPopup)
@@ -938,7 +948,7 @@ final class ShelfItemViewModel: ObservableObject {
             
             let updateCompressionVisibility = {
                 let formatIndex = formatPopup.indexOfSelectedItem
-                let showCompression = formatIndex == 1 || formatIndex == 2 // JPEG or HEIC
+                let showCompression = formatIndex == 1 || formatIndex == 2 || formatIndex == 5 // JPEG, HEIC or WebP
                 qualitySlider.isHidden = !showCompression
                 qualityValueLabel.isHidden = !showCompression
                 qualityLabel.isHidden = !showCompression
@@ -1002,6 +1012,7 @@ final class ShelfItemViewModel: ObservableObject {
                 case 2: format = .heic
                 case 3: format = .tiff
                 case 4: format = .bmp
+                case 5: format = .webp
                 default: format = .png
                 }
                 
