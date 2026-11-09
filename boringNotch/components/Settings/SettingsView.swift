@@ -872,7 +872,7 @@ struct About: View {
                 HStack(spacing: 30) {
                     Spacer(minLength: 0)
                     Button {
-                        if let url = URL(string: "https://github.com/TheBoredTeam/boring.notch") {
+                        if let url = URL(string: "https://github.com/okashiina/boring.notch") {
                             NSWorkspace.shared.open(url)
                         }
                     } label: {
@@ -888,10 +888,21 @@ struct About: View {
                     Spacer(minLength: 0)
                 }
                 .buttonStyle(PlainButtonStyle())
+
+                HStack {
+                    Spacer(minLength: 0)
+                    Link(destination: URL(string: "https://github.com/TheBoredTeam/boring.notch")!) {
+                        Text("Based on Boring Notch by TheBoredTeam (GPL-3.0)")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    Spacer(minLength: 0)
+                }
             }
             VStack(spacing: 0) {
                 Divider()
-                Text("Made with 🫶🏻 by not so boring not.people")
+                Text("Made by TwoTabs Studio")
                     .foregroundStyle(.secondary)
                     .padding(.top, 5)
                     .padding(.bottom, 7)
@@ -1382,7 +1393,7 @@ struct Appearance: View {
 
             Section {
                 Defaults.Toggle(key: .showMirror) {
-                    Text("Enable boring mirror")
+                    Text("Enable mirror")
                 }
                     .disabled(!checkVideoInput())
                 Picker("Mirror shape", selection: $mirrorShape) {

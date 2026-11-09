@@ -8,6 +8,22 @@
 import SwiftUI
 import SwiftUIIntrospect
 
+/// TwoTabs Studio logo. Drop a PNG into Assets.xcassets/TwoTabsLogo.imageset to use it;
+/// until then the app icon is shown.
+struct TwoTabsLogoImage: View {
+    var body: some View {
+        if let logo = NSImage(named: "TwoTabsLogo") {
+            Image(nsImage: logo)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+        } else {
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+        }
+    }
+}
+
 struct WelcomeView: View {
     var onGetStarted: (() -> Void)? = nil
     var body: some View {
@@ -21,12 +37,10 @@ struct WelcomeView: View {
                     .offset(y: -5)
                     .background(SparkleView().opacity(0.6))
                 VStack(spacing: 8) {
-                    Image("logo2")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
+                    TwoTabsLogoImage()
                         .frame(width: 100, height: 100)
                         .padding(.bottom, 8)
-                    Text("Boring Notch")
+                    Text("TwoTabs Notch")
                         .font(.system(.largeTitle, design: .default))
                         .fontWeight(.semibold)
                     Text("Welcome")
@@ -62,14 +76,12 @@ struct WelcomeView: View {
                 .padding(.top)
             }
             
-            Image("theboringteam")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(height: 22)
+            Text("by TwoTabs Studio")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 .padding()
                 .padding(.bottom, 36)
-                .blendMode(.overlay)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .ignoresSafeArea()
