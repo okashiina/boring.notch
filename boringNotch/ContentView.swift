@@ -31,6 +31,7 @@ struct ContentView: View {
     @State private var gestureProgress: CGFloat = .zero
 
     @State private var haptics: Bool = false
+    @ObservedObject var capturePeek = CapturePeekModel.shared // TwoTabs: screenshot/recording preview in the closed notch
 
     @Namespace var albumArtNamespace
 
@@ -286,6 +287,8 @@ struct ContentView: View {
                             .frame(width: 76, alignment: .trailing)
                         }
                         .frame(height: vm.effectiveClosedNotchHeight, alignment: .center)
+                      } else if let capture = capturePeek.current, vm.notchState == .closed, !vm.hideOnClosed { // TwoTabs: new screenshot/recording
+                          CapturePeekClosedActivity(event: capture)
                       } else if coordinator.sneakPeek.show && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && vm.notchState == .closed {
                           InlineHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
                               .transition(.opacity)

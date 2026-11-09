@@ -14,6 +14,7 @@ struct ShelfView: View {
     @StateObject var selection = ShelfSelectionModel.shared
     @StateObject private var quickLookService = QuickLookService()
     @ObservedObject private var bar = SmartShelfBarState.shared // TwoTabs
+    @ObservedObject private var capturePeek = CapturePeekModel.shared // TwoTabs
     @State private var barVisible = false // TwoTabs
     private let spacing: CGFloat = 8
 
@@ -128,16 +129,23 @@ struct ShelfView: View {
                         .fontWeight(.medium)
                 }
             } else {
+                ScrollViewReader { proxy in // TwoTabs: scroll a fresh capture into view
                 ScrollView(.horizontal) {
                     HStack(spacing: spacing) {
                         ForEach(tvm.items) { item in
                             ShelfItemView(item: item)
                                 .environmentObject(quickLookService)
+                                .id(item.id) // TwoTabs
                         }
                     }
                 }
                 .padding(-spacing)
                 .scrollIndicators(.never)
+                .onChange(of: capturePeek.reveal, initial: true) { _, request in // TwoTabs
+                    guard let request else { return }
+                    DispatchQueue.main.async { withAnimation(.smooth) { proxy.scrollTo(request.itemID, anchor: .center) } }
+                }
+                }
                 .onDrop(of: [.fileURL, .url, .utf8PlainText, .plainText, .data], isTargeted: $vm.dragDetectorTargeting) { providers in
                     handleDrop(providers: providers)
                 }

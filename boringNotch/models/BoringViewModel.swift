@@ -195,6 +195,7 @@ class BoringViewModel: NSObject, ObservableObject {
         
         // Force music information update when notch is opened
         MusicManager.shared.forceUpdate()
+        CapturePeekModel.shared.notchWillOpen() // TwoTabs: jump to a fresh screenshot/recording on the shelf
     }
 
     func close() {
@@ -209,6 +210,7 @@ class BoringViewModel: NSObject, ObservableObject {
         self.coordinator.sneakPeek.show = false
         self.edgeAutoOpenActive = false
         ShelfSelectionModel.shared.clear() // TwoTabs: the smart shelf selection (and its action strip) ends with the open notch
+        CapturePeekModel.shared.notchDidClose() // TwoTabs
 
         // Set the current view to shelf if it contains files and the user enables openShelfByDefault
         // Otherwise, if the user has not enabled openLastShelfByDefault, set the view to home

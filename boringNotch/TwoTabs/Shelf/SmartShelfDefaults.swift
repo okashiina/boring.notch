@@ -46,9 +46,20 @@ extension Defaults.Keys {
     static let smartShelfLitterboxExpiry = Key<LitterboxExpiry>("smartShelfLitterboxExpiry", default: .hours72)
 
     // Screenshots to shelf
-    static let smartShelfScreenshotsEnabled = Key<Bool>("smartShelfScreenshotsEnabled", default: false)
+    // On by default (a new install catches screenshots as soon as a folder is granted).
+    static let smartShelfScreenshotsEnabled = Key<Bool>("smartShelfScreenshotsEnabled", default: true)
     static let smartShelfScreenshotFolderBookmark = Key<Data?>("smartShelfScreenshotFolderBookmark", default: nil)
     static let smartShelfScreenshotFolderPath = Key<String?>("smartShelfScreenshotFolderPath", default: nil)
+    /// Also add new images that land on the pasteboard (clipboard screenshots, copied images).
+    static let smartShelfCatchCopiedImages = Key<Bool>("smartShelfCatchCopiedImages", default: true)
+    /// How many auto-added captures stay on the shelf (the oldest ones are dropped from the shelf).
+    static let smartShelfCaptureKeepCount = Key<Int>("smartShelfCaptureKeepCount", default: 10)
+    /// Closed-notch preview when a capture lands (thumbnail + label), and jump to it on open.
+    static let smartShelfCapturePreview = Key<Bool>("smartShelfCapturePreview", default: true)
+    /// Shelf item ids that were auto-added from a capture (oldest first). Only these are ever auto-removed.
+    static let smartShelfAutoCaptureIDs = Key<[String]>("smartShelfAutoCaptureIDs", default: [])
+    /// The one-time "choose your screenshot folder" prompt in the shelf has been shown.
+    static let smartShelfFolderPromptShown = Key<Bool>("smartShelfFolderPromptShown", default: false)
 
     // Shrink
     static let smartShelfShrinkMaxDimension = Key<Int>("smartShelfShrinkMaxDimension", default: 1920)
