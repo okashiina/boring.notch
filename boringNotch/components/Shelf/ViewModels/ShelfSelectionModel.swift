@@ -89,6 +89,30 @@ final class ShelfSelectionModel: ObservableObject {
         lastAnchorID = nil
     }
 
+    // MARK: - TwoTabs: "click on empty shelf space deselects", without items counting as empty space
+    //
+    // The shelf panel has a SwiftUI tap gesture that clears the selection. A click on a thumbnail lands on
+    // the AppKit DraggableClickView (which selects), but SwiftUI's tap recognizer on the panel still sees the
+    // same click and would clear the selection again (flicker). The item view tells us when the pointer is
+    // down on an item so the panel tap can ignore that click.
+    private var itemPointerDownAt: TimeInterval?
+
+    func itemPointerDown() {
+        itemPointerDownAt = ProcessInfo.processInfo.systemUptime
+    }
+
+    /// Called on mouse-up / drag end. Deferred one turn so a tap recognizer that fires in the same event
+    /// dispatch (before or after the view's own mouseUp) still sees the guard.
+    func itemPointerUp() {
+        DispatchQueue.main.async { [weak self] in self?.itemPointerDownAt = nil }
+    }
+
+    /// The panel's tap handler: clears only when the click was not on an item.
+    func clearFromEmptySpaceTap() {
+        if let downAt = itemPointerDownAt, ProcessInfo.processInfo.systemUptime - downAt < 10 { return }
+        clear()
+    }
+
     // Keep anchor sane if items array changed drastically (optional helper)
     func ensureValidAnchor(in allItems: [ShelfItem]) {
         if let anchor = lastAnchorID, !allItems.contains(where: { $0.id == anchor }) {

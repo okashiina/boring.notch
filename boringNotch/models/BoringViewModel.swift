@@ -208,6 +208,7 @@ class BoringViewModel: NSObject, ObservableObject {
         self.isBatteryPopoverActive = false
         self.coordinator.sneakPeek.show = false
         self.edgeAutoOpenActive = false
+        ShelfSelectionModel.shared.clear() // TwoTabs: the smart shelf selection (and its action strip) ends with the open notch
 
         // Set the current view to shelf if it contains files and the user enables openShelfByDefault
         // Otherwise, if the user has not enabled openLastShelfByDefault, set the view to home

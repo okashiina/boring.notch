@@ -227,9 +227,21 @@ private struct DraggableClickHandler<Content: View>: NSViewRepresentable {
             onRightClick?(event, self)
         }
         
+        // TwoTabs: the notch panel is non-activating and never key; make the very first click count.
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
         override func mouseDown(with event: NSEvent) {
             mouseDownEvent = event
+            // TwoTabs: tell the panel's "tap empty space to deselect" that this click belongs to an item.
+            // (Ctrl-click opens the context menu, which eats the mouse-up, so it must not arm the guard.)
+            if !event.modifierFlags.contains(.control) { ShelfSelectionModel.shared.itemPointerDown() }
             onClick?(event, self)
+        }
+
+        // TwoTabs
+        override func mouseUp(with event: NSEvent) {
+            ShelfSelectionModel.shared.itemPointerUp()
+            super.mouseUp(with: event)
         }
         
         override func mouseDragged(with event: NSEvent) {
@@ -347,6 +359,7 @@ private struct DraggableClickHandler<Content: View>: NSViewRepresentable {
         
         func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
             ShelfSelectionModel.shared.endDrag()
+            ShelfSelectionModel.shared.itemPointerUp() // TwoTabs
 
             // Stop accessing security-scoped resources after drag completes
             for url in draggedURLs {

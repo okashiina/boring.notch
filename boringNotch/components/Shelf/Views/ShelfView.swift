@@ -13,9 +13,13 @@ struct ShelfView: View {
     @StateObject var tvm = ShelfStateViewModel.shared
     @StateObject var selection = ShelfSelectionModel.shared
     @StateObject private var quickLookService = QuickLookService()
+    @ObservedObject private var bar = SmartShelfBarState.shared // TwoTabs
+    @State private var barVisible = false // TwoTabs
     private let spacing: CGFloat = 8
 
     var body: some View {
+        // TwoTabs: the action strip gets its own row under the shelf panel; the notch grows to make room.
+        VStack(spacing: 0) {
         HStack(spacing: 12) {
             FileShareView()
                 .aspectRatio(1, contentMode: .fit)
@@ -25,6 +29,23 @@ struct ShelfView: View {
                     handleDrop(providers: providers)
                 }
         }
+        SmartShelfActionBar()
+            .frame(height: barVisible ? SmartShelfBarMetrics.extraHeight : 0, alignment: .bottom)
+            .clipped()
+            .opacity(barVisible ? 1 : 0)
+            .allowsHitTesting(barVisible)
+        }
+        .onChange(of: bar.isActive, initial: true) { _, active in setBarVisible(active) }
+        // Something (e.g. a drag entering the notch region) re-opened the notch at its base size: re-apply.
+        .onChange(of: vm.notchSize) { _, size in
+            if barVisible, vm.notchState == .open, size.height < openNotchSize.height + SmartShelfBarMetrics.extraHeight {
+                setBarVisible(true, force: true)
+            }
+        }
+        .onDisappear {
+            // Leaving the shelf tab (not closing the notch) must give the extra height back.
+            if vm.notchState == .open { vm.notchSize = openNotchSize }
+        }
         // Bind Quick Look to shelf selection
         .onChange(of: selection.selectedIDs) {
             updateQuickLookSelection()
@@ -32,6 +53,20 @@ struct ShelfView: View {
         .quickLookPresenter(using: quickLookService)
     }
     
+    /// TwoTabs: show/hide the strip and grow/shrink the open notch in one transaction, so the shelf panel
+    /// keeps its height while the notch moves.
+    private func setBarVisible(_ visible: Bool, force: Bool = false) {
+        guard force || visible != barVisible else { return }
+        withAnimation(.smooth(duration: 0.28)) {
+            barVisible = visible
+            if vm.notchState == .open {
+                vm.notchSize = CGSize(
+                    width: openNotchSize.width,
+                    height: openNotchSize.height + (visible ? SmartShelfBarMetrics.extraHeight : 0))
+            }
+        }
+    }
+
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
         guard !selection.isDragging else { return false }
         vm.dropEvent = true
@@ -70,14 +105,11 @@ struct ShelfView: View {
                 content
                     .padding()
             }
-            .overlay(alignment: .top) {
-                SmartShelfActionBar() // TwoTabs: smart shelf quick actions
-            }
             .transaction { transaction in
                 transaction.animation = vm.animation
             }
             .contentShape(Rectangle())
-            .onTapGesture { selection.clear() }
+            .onTapGesture { selection.clearFromEmptySpaceTap() } // TwoTabs: items are not "empty space"
     }
 
     var content: some View {
