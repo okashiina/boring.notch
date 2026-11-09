@@ -77,6 +77,7 @@ struct BoringHeader: View {
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
+                        ClaudePetHeaderButton() // TwoTabs
                         if Defaults[.showBatteryIndicator] {
                             BoringBatteryView(
                                 batteryWidth: 30,

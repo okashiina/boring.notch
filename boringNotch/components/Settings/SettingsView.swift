@@ -262,6 +262,8 @@ struct GeneralSettings: View {
             NotchBehaviour()
 
             gestureControls()
+
+            ClaudePetSettingsSection() // TwoTabs
         }
         .toolbar {
             Button("Quit app") {
