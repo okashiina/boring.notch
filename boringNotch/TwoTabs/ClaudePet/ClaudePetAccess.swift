@@ -28,6 +28,14 @@ final class ClaudePetAccess: ObservableObject {
     }
 
     private func restore() {
+        // Zero setup: the entitlement home-relative-path.read-only "/.claude/" lets the sandbox read ~/.claude directly.
+        let direct = URL(fileURLWithPath: Self.realHome).appendingPathComponent(".claude", isDirectory: true)
+        if Defaults[.claudePetClaudeDirBookmark] == nil,
+           (try? FileManager.default.contentsOfDirectory(atPath: direct.path)) != nil {
+            directory = direct
+            ClaudePetLog.logger.info("~/.claude readable directly: \(direct.path, privacy: .public)")
+            return
+        }
         guard let data = Defaults[.claudePetClaudeDirBookmark] else { return }
         var stale = false
         guard let url = try? URL(resolvingBookmarkData: data, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &stale),
