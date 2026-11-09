@@ -12,12 +12,36 @@ struct ClaudePetSettingsSection: View {
     @ObservedObject private var store = ClaudePetStore.shared
     @Default(.claudePetEnabled) private var enabled
     @Default(.claudePetHideWhenIdle) private var hideWhenIdle
+    @Default(.claudePetSoundWaiting) private var soundWaiting
+    @Default(.claudePetSoundDone) private var soundDone
+    @Default(.claudePetPeek) private var peek
+    @ObservedObject private var access = ClaudePetAccess.shared
 
     var body: some View {
         Section {
             Toggle("Show Claude Code pet beside the notch", isOn: $enabled)
             Toggle("Hide when idle (after 5 minutes asleep)", isOn: $hideWhenIdle)
                 .disabled(!enabled)
+
+            Toggle("Sound when Claude waits for you", isOn: $soundWaiting).disabled(!enabled)
+            Toggle("Sound when a turn finishes", isOn: $soundDone).disabled(!enabled)
+            Toggle("Show \"Claude needs you\" under the closed notch", isOn: $peek).disabled(!enabled)
+
+            LabeledContent("Transcripts (~/.claude)") {
+                HStack {
+                    Text(access.isGranted ? "Access granted" : "Not granted").foregroundStyle(access.isGranted ? .green : .orange)
+                    if access.isGranted {
+                        Button("Revoke") { access.revoke() }
+                    } else {
+                        Button("Give access...") { access.requestAccess() }
+                    }
+                }
+            }
+            if !access.isGranted {
+                Text("Optional, read only. Adds Claude's replies, session titles, git branch, interrupt detection and today's usage to the Claude tab. Pick your .claude folder in the dialog.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
             LabeledContent("Socket") { Text(socketText).foregroundStyle(socketColor) }
             LabeledContent("Hooks") { Text(hookText).foregroundStyle(store.lastEventDate == nil ? .orange : .green) }
