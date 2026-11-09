@@ -30,6 +30,15 @@ struct ClaudePetBadgedSprite: View {
                             .offset(x: 3, y: 0)
                     }
                 }
+                // Gentle hop whenever a session starts waiting for you.
+                .keyframeAnimator(initialValue: CGFloat(0), trigger: store.bounceTrigger) { content, lift in
+                    content.offset(y: lift)
+                } keyframes: { _ in
+                    LinearKeyframe(-7, duration: 0.14)
+                    SpringKeyframe(0, duration: 0.45, spring: .bouncy)
+                    LinearKeyframe(-4, duration: 0.12)
+                    SpringKeyframe(0, duration: 0.35, spring: .bouncy)
+                }
                 .frame(width: slot, height: slot)
                 .help("\(top.projectName): \(top.task.label)")
         }
@@ -39,17 +48,34 @@ struct ClaudePetBadgedSprite: View {
 /// Closed notch with only the pet: mirrors BoringFaceAnimation's geometry (empty left slot, notch, pet on the right).
 struct ClaudePetClosedActivity: View {
     @EnvironmentObject var vm: BoringViewModel
+    @ObservedObject private var store = ClaudePetStore.shared
 
     var body: some View {
         let slot = max(0, vm.effectiveClosedNotchHeight - 12)
-        HStack {
+        VStack(spacing: 0) {
             HStack {
-                Rectangle().fill(.clear).frame(width: slot, height: slot)
-                Rectangle().fill(.black).frame(width: vm.closedNotchSize.width - 20)
-                ClaudePetBadgedSprite(slot: slot, spriteSize: max(slot, vm.effectiveClosedNotchHeight - 4))
+                HStack {
+                    Rectangle().fill(.clear).frame(width: slot, height: slot)
+                    Rectangle().fill(.black).frame(width: vm.closedNotchSize.width - 20)
+                    ClaudePetBadgedSprite(slot: slot, spriteSize: max(slot, vm.effectiveClosedNotchHeight - 4))
+                }
+            }
+            .frame(height: vm.effectiveClosedNotchHeight, alignment: .center)
+
+            // Sneak peek: the notch grows a line while a session waits for you.
+            if store.attentionPeek, let waiting = store.sessions.first(where: { $0.task == .waiting }) {
+                HStack(spacing: 5) {
+                    Image(systemName: "exclamationmark.bubble.fill").foregroundStyle(.orange)
+                    Text("Claude needs you · \(waiting.projectName)").lineLimit(1)
+                }
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.white)
+                .frame(width: vm.closedNotchSize.width, alignment: .center)
+                .padding(.bottom, 8)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .frame(height: vm.effectiveClosedNotchHeight, alignment: .center)
+        .animation(.smooth, value: store.attentionPeek)
     }
 }
 
@@ -72,7 +98,7 @@ struct ClaudePetSessionRow: View {
         HStack(spacing: 8) {
             ClaudePetSpriteView(task: session.task, since: session.taskSince, size: 24)
             VStack(alignment: .leading, spacing: 1) {
-                Text(session.projectName)
+                Text(session.displayTitle)
                     .font(.callout.weight(.medium))
                     .lineLimit(1)
                 Text(detail)

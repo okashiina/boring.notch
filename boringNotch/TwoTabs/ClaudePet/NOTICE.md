@@ -18,12 +18,23 @@ TwoTabs Notch (a fork of Boring Notch) is GPL-3.0 as well, so the two are compat
   - the hook installer's merge/prune approach (`HookInstaller`), here in `scripts/twotabs/claude_hooks_merge.py`,
   - per-task animation rates (`NotchiTask.loopDuration`).
 
+- **Island art**: `Sprites/claude_island_grass.png` is Notchi's `GrassIsland` texture
+  (`GrassIsland.imageset/grass.png`), copied unchanged.
+- **Ported ideas** (reimplemented): the grass island scene with a wandering pet per session and its per-state walk/bob
+  parameters (`GrassIslandView`, `NotchiTask`), the activity feed rows (`ActivityRowView`, `UserPromptBubbleView`,
+  `AssistantTextRowView`), the incremental transcript reader and "[Request interrupted by user" detection
+  (`ConversationParser`), today's token/cost estimate and the per-family prices (`ClaudeCostScanner`,
+  `claude-pricing-fallback.json`), the terminal jump (`TerminalJumpService`, here via the app bundle that hosts the
+  terminal, found by the hook), notification sound on waiting (`SoundService`).
+
 ## What is not ported
 
-Emotion/sentiment analysis, Codex and Devin support, usage and cost dashboards, Notchi's own panel and window code,
-the grass island, sounds and the updater.
+Emotion/sentiment analysis, Codex and Devin support, the network usage quota (OAuth / keychain), water and ground
+island themes, Notchi's own panel and window code, custom sounds and the updater.
 
 ## What is new here
 
-Pure `ClaudePetEngine` (no timers, testable), sandbox-safe socket inside the app container, a pure shell + `nc` hook
+Late-delivery guard for async hooks, silence fallbacks per last event, os.Logger diagnostics (category ClaudePet),
+~/.claude access through one security-scoped bookmark, the Claude tab in the open notch, "Claude needs you" peek under the
+closed notch. Pure `ClaudePetEngine` (no timers, testable), sandbox-safe socket inside the app container, a pure shell + `nc` hook
 (no Python at run time), closed-notch and music-slot placement, open-notch session list, settings section.

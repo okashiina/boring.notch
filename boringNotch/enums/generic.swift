@@ -27,6 +27,7 @@ public enum NotchState {
 public enum NotchViews {
     case home
     case shelf
+    case claude // TwoTabs: Claude Code pet tab
 }
 
 enum SettingsEnum {

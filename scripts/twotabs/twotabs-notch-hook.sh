@@ -19,7 +19,10 @@ INPUT=$(cat 2>/dev/null) || exit 0
 
 # Headless `claude -p` runs must not animate the pet: look for -p / --print on this process or its parent.
 # Only checked on SessionStart / UserPromptSubmit (the app keeps the flag per session).
+# The same walk finds the app bundle hosting the terminal (Terminal.app, iTerm, Ghostty, Claude.app, VS Code, ...)
+# so the notch can bring it to the front: sent as a second header line "#twotabs-host <path to .app>".
 HEADER=""
+HOSTLINE=""
 case "$INPUT" in
   *'"SessionStart"'*|*'"UserPromptSubmit"'*)
     INTERACTIVE=1
@@ -31,12 +34,27 @@ case "$INPUT" in
       fi
     done
     HEADER="#twotabs interactive=$INTERACTIVE"
+    CUR="$PPID"
+    for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+      [ -n "$CUR" ] && [ "$CUR" -gt 1 ] 2>/dev/null || break
+      LINE=$(ps -o ppid=,comm= -p "$CUR" 2>/dev/null) || break
+      [ -n "$LINE" ] || break
+      LINE="${LINE#"${LINE%%[![:space:]]*}"}"
+      NEXT="${LINE%%[[:space:]]*}"
+      COMM="${LINE#"$NEXT"}"; COMM="${COMM#"${COMM%%[![:space:]]*}"}"
+      case "$COMM" in
+        */claude-code/*) ;; # the Claude Code binary itself ships as claude.app: not a host, keep walking up
+        *.app/*) HOSTLINE="#twotabs-host ${COMM%%.app/*}.app"; break ;;
+      esac
+      CUR="$NEXT"
+    done
     ;;
 esac
 
 # -w 1: give up after one second. The app closes the connection as soon as it has read the JSON.
 {
   [ -n "$HEADER" ] && printf '%s\n' "$HEADER"
+  [ -n "$HOSTLINE" ] && printf '%s\n' "$HOSTLINE"
   printf '%s' "$INPUT"
 } | nc -U -w 1 "$SOCK" >/dev/null 2>&1
 

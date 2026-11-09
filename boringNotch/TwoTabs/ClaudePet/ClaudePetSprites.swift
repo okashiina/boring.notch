@@ -45,6 +45,19 @@ enum ClaudePetSprites {
         return sheet
     }
 
+    private static var imageCache: [String: CGImage] = [:]
+
+    /// A whole PNG from the bundle (the island grass texture).
+    @MainActor
+    static func image(named name: String) -> CGImage? {
+        if let cached = imageCache[name] { return cached }
+        guard let url = Bundle.main.url(forResource: name, withExtension: "png"),
+              let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { return nil }
+        imageCache[name] = image
+        return image
+    }
+
     static func slice(url: URL) -> [CGImage]? {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let image = CGImageSourceCreateImageAtIndex(source, 0, nil),

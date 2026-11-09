@@ -10,6 +10,7 @@
 
 import Darwin
 import Foundation
+import os
 
 final class ClaudePetSocketServer: @unchecked Sendable {
     enum ServerError: Error, CustomStringConvertible {
@@ -43,7 +44,10 @@ final class ClaudePetSocketServer: @unchecked Sendable {
     private var acceptSource: DispatchSourceRead?
     private var onEvent: (@Sendable (ClaudePetEvent) -> Void)?
     private let serverQueue = DispatchQueue(label: "twotabs.claudepet.socket.server")
-    private let clientQueue = DispatchQueue(label: "twotabs.claudepet.socket.client", attributes: .concurrent)
+    /// Serial on purpose: one connection per event, and events must reach the engine in the order they were accepted.
+    /// (A concurrent queue let two events that arrive milliseconds apart overtake each other.) A silent client costs
+    /// at most `clientReadTimeout` for the ones behind it.
+    private let clientQueue = DispatchQueue(label: "twotabs.claudepet.socket.client")
 
     init(path: String = ClaudePetSocketServer.defaultSocketPath(), clientReadTimeout: TimeInterval = 0.5) {
         self.path = path
@@ -94,6 +98,7 @@ final class ClaudePetSocketServer: @unchecked Sendable {
             source.setEventHandler { [weak self] in self?.acceptPending() }
             source.resume()
             self.acceptSource = source
+            ClaudePetLog.logger.info("server listening at \(self.path, privacy: .public)")
         }
     }
 
@@ -105,6 +110,7 @@ final class ClaudePetSocketServer: @unchecked Sendable {
                 close(listenFD)
                 listenFD = -1
                 unlink(path)
+                ClaudePetLog.logger.info("server stopped")
             }
             onEvent = nil
         }
@@ -115,7 +121,10 @@ final class ClaudePetSocketServer: @unchecked Sendable {
     private func acceptPending() {
         while true {
             let client = accept(listenFD, nil, nil)
-            if client < 0 { return } // EAGAIN: drained
+            if client < 0 {
+                if errno != EAGAIN && errno != EWOULDBLOCK { ClaudePetLog.logger.error("accept failed errno=\(errno, privacy: .public)") }
+                return // EAGAIN: drained
+            }
             guard let handler = onEvent else { close(client); continue }
             clientQueue.async { [clientReadTimeout] in
                 Self.serve(client: client, timeout: clientReadTimeout, handler: handler)
@@ -134,13 +143,21 @@ final class ClaudePetSocketServer: @unchecked Sendable {
 
         var buffer = Data()
         var chunk = [UInt8](repeating: 0, count: 64 * 1024)
+        var ended = "complete"
         while buffer.count < ClaudePetEvent.maxMessageBytes {
             let n = read(client, &chunk, chunk.count)
-            if n <= 0 { break } // EOF, timeout or error
+            if n < 0 && errno == EINTR { continue }
+            if n == 0 { ended = "eof"; break }
+            if n < 0 { ended = errno == EAGAIN || errno == EWOULDBLOCK ? "timeout" : "error \(errno)"; break }
             buffer.append(chunk, count: n)
             if ClaudePetEvent.isComplete(buffer) { break } // answer without waiting for the sender to close
         }
-        if let event = ClaudePetEvent.decode(buffer) { handler(event) }
+        if let event = ClaudePetEvent.decode(buffer) {
+            handler(event)
+        } else {
+            // Never log the payload itself (it can hold prompts); size and how the read ended are enough to diagnose.
+            ClaudePetLog.logger.error("decode failed: \(buffer.count, privacy: .public) bytes, read ended by \(ended, privacy: .public)")
+        }
     }
 
     private static func makeAddress(_ path: String) -> sockaddr_un {
