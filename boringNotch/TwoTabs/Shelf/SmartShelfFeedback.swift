@@ -54,8 +54,10 @@ final class SmartShelfFeedback: ObservableObject {
                duration: duration)
     }
 
-    func info(_ text: String, symbol: String = "info.circle.fill", duration: TimeInterval = 3) {
-        finish(Message(text: text, style: .info, symbol: symbol), duration: duration)
+    func info(_ text: String, symbol: String = "info.circle.fill", duration: TimeInterval = 3,
+              actionTitle: String? = nil, action: (@MainActor () -> Void)? = nil) {
+        finish(Message(text: text, style: .info, symbol: symbol, actionTitle: actionTitle, action: action),
+               duration: duration)
     }
 
     func fail(_ text: String, duration: TimeInterval = 9) {

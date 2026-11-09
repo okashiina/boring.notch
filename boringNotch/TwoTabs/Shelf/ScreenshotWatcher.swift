@@ -2,7 +2,9 @@
 //  ScreenshotWatcher.swift
 //  TwoTabs Notch - Smart Shelf
 //
-//  Watches one user-chosen folder (security-scoped bookmark) and drops new screenshots on the shelf.
+//  Watches one user-chosen folder (security-scoped bookmark) and drops new screenshots and screen
+//  recordings (.mov/.mp4) on the shelf. Finished-file detection, shelf bookkeeping and the notch preview
+//  live in CaptureCore / CaptureIngest / CapturePeek.
 //
 
 import AppKit
@@ -16,8 +18,6 @@ import Darwin
 @MainActor
 final class ScreenshotWatcher {
     static let shared = ScreenshotWatcher()
-
-    private static let imageExtensions: Set<String> = ["png", "jpg", "jpeg", "heic"]
 
     private var source: DispatchSourceFileSystemObject?
     private var watchedFolder: URL?
@@ -82,7 +82,13 @@ final class ScreenshotWatcher {
         panel.allowsMultipleSelection = false
         panel.canCreateDirectories = false
         panel.directoryURL = suggestedFolder()
-        guard panel.runModal() == .OK, let url = panel.url else { return false }
+        // The notch is an accessory window: bring the picker to the front and keep the notch from closing
+        // when the pointer leaves it for the panel.
+        SharingStateManager.shared.beginInteraction()
+        NSApp.activate(ignoringOtherApps: true)
+        let response = panel.runModal()
+        SharingStateManager.shared.endInteraction()
+        guard response == .OK, let url = panel.url else { return false }
         return store(folder: url)
     }
 
@@ -146,7 +152,7 @@ final class ScreenshotWatcher {
         }
 
         startedAt = Date()
-        knownNames = Set(listImageNames(in: folder))
+        knownNames = Set(listCaptureNames(in: folder))
 
         let src = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fd, eventMask: [.write, .extend, .rename, .link], queue: .main)
@@ -167,53 +173,24 @@ final class ScreenshotWatcher {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: work)
     }
 
-    private func listImageNames(in folder: URL) -> [String] {
+    private func listCaptureNames(in folder: URL) -> [String] {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
-        return names.filter { isCandidateName($0) }
-    }
-
-    private func isCandidateName(_ name: String) -> Bool {
-        !name.hasPrefix(".") && Self.imageExtensions.contains((name as NSString).pathExtension.lowercased())
+        return names.filter { CaptureFileKind.kind(forFileName: $0) != nil }
     }
 
     private func scan() {
         guard let folder = watchedFolder else { return }
-        var fresh: [URL] = []
-        for name in listImageNames(in: folder) where !knownNames.contains(name) {
+        for name in listCaptureNames(in: folder) where !knownNames.contains(name) {
+            guard let kind = CaptureFileKind.kind(forFileName: name) else { continue }
             knownNames.insert(name)
             let url = folder.appendingPathComponent(name)
             let values = try? url.resourceValues(forKeys: [.creationDateKey, .isRegularFileKey])
             guard values?.isRegularFile ?? true else { continue }
             // Only files created after the watcher started (a little slack for clock rounding).
             if let created = values?.creationDate, created < startedAt.addingTimeInterval(-2) { continue }
-            fresh.append(url)
+            // One task per file: a long recording must not hold up a screenshot taken meanwhile.
+            Task { await CaptureIngest.addFile(url, kind: kind) }
         }
-        guard !fresh.isEmpty else { return }
-        Task { await self.addWhenStable(fresh) }
-    }
-
-    /// Waits until each file stops growing, then adds it to the shelf.
-    private func addWhenStable(_ urls: [URL]) async {
-        var ready: [URL] = []
-        for url in urls {
-            var lastSize = -1
-            for _ in 0..<6 {
-                let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
-                if size > 0 && size == lastSize { ready.append(url); break }
-                lastSize = size
-                try? await Task.sleep(for: .milliseconds(400))
-            }
-        }
-        var items: [ShelfItem] = []
-        for url in ready {
-            guard let bookmark = try? Bookmark(url: url) else { continue }
-            items.append(ShelfItem(kind: .file(bookmark: bookmark.data), isTemporary: false))
-        }
-        guard !items.isEmpty else { return }
-        ShelfStateViewModel.shared.add(items)
-        SmartShelfFeedback.shared.info(
-            items.count == 1 ? "Screenshot added to shelf" : "\(items.count) screenshots added to shelf",
-            symbol: "camera.viewfinder")
     }
 }
 
@@ -222,6 +199,7 @@ enum SmartShelfBootstrap {
     @MainActor
     static func start() {
         ScreenshotWatcher.shared.bootstrap()
+        ClipboardImageWatcher.shared.bootstrap()
         KeyboardShortcuts.onKeyDown(for: .clearShelf) { SmartShelfClear.perform() }
     }
 }
