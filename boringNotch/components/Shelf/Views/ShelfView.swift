@@ -69,7 +69,8 @@ struct ShelfView: View {
     }
 
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
-        guard !selection.isDragging else { return false }
+        // TwoTabs: no longer reject drops when the internal-drag flag is set. A stale flag made the open shelf
+        // refuse every drop (the closed-notch drop path never checked it). add() already dedupes.
         vm.dropEvent = true
         ShelfStateViewModel.shared.load(providers)
         return true
